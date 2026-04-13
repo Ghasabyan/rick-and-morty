@@ -34,8 +34,8 @@ class CharacterCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
-            height: 130,
+            width: 130,
+            height: 160,
             child: CachedNetworkImage(
               imageUrl: character.image,
               fit: BoxFit.cover,
@@ -47,7 +47,7 @@ class CharacterCard extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+              padding: const EdgeInsets.fromLTRB(12, 6, 4, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -105,13 +105,13 @@ class CharacterCard extends StatelessWidget {
                   Text(
                     'Origin: ${character.origin.name}',
                     style: theme.textTheme.bodySmall,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     'Location: ${character.location.name}',
                     style: theme.textTheme.bodySmall,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
