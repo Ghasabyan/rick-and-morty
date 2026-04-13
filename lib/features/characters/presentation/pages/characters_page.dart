@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rick_and_morty/features/characters/presentation/providers/characters_provider.dart';
+import 'package:rick_and_morty/features/characters/presentation/providers/favorites_provider.dart';
 import 'package:rick_and_morty/features/characters/presentation/widgets/character_card.dart';
 
 class CharactersPage extends StatefulWidget {
@@ -31,9 +32,12 @@ class _CharactersPageState extends State<CharactersPage> {
   }
 
   void _onScroll() {
+    // Don't paginate while the user is filtering — the filtered view would
+    // appear empty even though new pages loaded, creating an endless spin.
+    final provider = context.read<CharactersProvider>();
+    if (provider.searchQuery.isNotEmpty) return;
     final pos = _scrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 300) {
-      final provider = context.read<CharactersProvider>();
       if (provider.hasMore && provider.status == CharactersStatus.loaded) {
         provider.loadCharacters();
       }
@@ -135,6 +139,24 @@ class _CharactersPageState extends State<CharactersPage> {
                               Center(child: CircularProgressIndicator()),
                         );
                       }
+                      if (provider.status == CharactersStatus.error) {
+                        return Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(provider.errorMessage,
+                                  textAlign: TextAlign.center),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () => provider.loadCharacters(),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                       if (!provider.hasMore) {
                         return const Padding(
                           padding: EdgeInsets.all(20),
@@ -149,8 +171,16 @@ class _CharactersPageState extends State<CharactersPage> {
                     return CharacterCard(
                       character: character,
                       isFavorite: provider.isFavorite(character.id),
-                      onFavoriteToggle: () =>
-                          provider.toggleFavorite(character),
+                      onFavoriteToggle: () async {
+                        await provider.toggleFavorite(character);
+                        if (context.mounted) {
+                          final isNowFav = provider.isFavorite(character.id);
+                          context
+                              .read<FavoritesProvider>()
+                              .syncFavoriteToggle(character,
+                                  isNowFavorite: isNowFav);
+                        }
+                      },
                     );
                   },
                 ),

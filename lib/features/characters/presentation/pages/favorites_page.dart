@@ -29,6 +29,28 @@ class _FavoritesPageState extends State<FavoritesPage> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        if (provider.status == FavoritesStatus.error) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(provider.errorMessage, textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => provider.loadFavorites(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         if (provider.status == FavoritesStatus.empty) {
           return const Center(
             child: Column(
@@ -61,7 +83,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
               onFavoriteToggle: () async {
                 await provider.removeFromFavorites(character);
                 if (context.mounted) {
-                  context.read<CharactersProvider>().refreshFavoriteIds();
+                  context
+                      .read<CharactersProvider>()
+                      .refreshFavoriteIds();
                 }
               },
             );

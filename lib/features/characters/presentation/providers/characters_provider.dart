@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:rick_and_morty/core/error/exceptions.dart';
 import 'package:rick_and_morty/features/characters/domain/entities/character.dart';
@@ -18,7 +19,10 @@ class CharactersProvider extends ChangeNotifier {
     required this.getCharactersUseCase,
     required this.toggleFavoriteUseCase,
     required this.getFavoritesUseCase,
-  });
+  }) {
+    // Load favorite IDs once at construction; updated incrementally via toggleFavorite.
+    _loadFavoriteIds();
+  }
 
   List<Character> _characters = [];
   Set<int> _favoriteIds = {};
@@ -29,6 +33,8 @@ class CharactersProvider extends ChangeNotifier {
   bool _hasMore = true;
   SortOption _sortOption = SortOption.none;
   String _searchQuery = '';
+  List<Character>? _visibleCharacters; // cache — invalidated on data/filter change
+  Timer? _searchDebounce;
 
   // Fuzzy match: strip spaces, lowercase, check subsequence
   static bool _fuzzyMatch(String name, String query) {
@@ -43,6 +49,11 @@ class CharactersProvider extends ChangeNotifier {
   }
 
   List<Character> get characters {
+    _visibleCharacters ??= _computeVisibleCharacters();
+    return _visibleCharacters!;
+  }
+
+  List<Character> _computeVisibleCharacters() {
     List<Character> result = _searchQuery.isEmpty
         ? List<Character>.from(_characters)
         : _characters.where((c) => _fuzzyMatch(c.name, _searchQuery)).toList();
@@ -77,13 +88,24 @@ class CharactersProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
 
   void setSearchQuery(String query) {
-    _searchQuery = query;
-    notifyListeners();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      _searchQuery = query;
+      _visibleCharacters = null;
+      notifyListeners();
+    });
   }
 
   void setSortOption(SortOption option) {
     _sortOption = option;
+    _visibleCharacters = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   Future<void> loadCharacters({bool refresh = false}) async {
@@ -109,8 +131,8 @@ class CharactersProvider extends ChangeNotifier {
       _characters.addAll(result.characters);
       _hasMore = _currentPage < _totalPages;
       _currentPage++;
+      _visibleCharacters = null;
       _status = CharactersStatus.loaded;
-      await _loadFavoriteIds();
     } catch (e) {
       _status = CharactersStatus.error;
       _errorMessage = e is NetworkException

@@ -26,14 +26,14 @@ class CharacterRepositoryImpl implements CharacterRepository {
       final response = await remoteDataSource.getCharacters(page: page);
       await localDataSource.cacheCharacters(page: page, response: response);
       return (
-        characters: response.results as List<Character>,
+        characters: List<Character>.from(response.results),
         totalPages: response.info.pages,
       );
     } else {
       final cached = await localDataSource.getCachedCharacters(page: page);
       if (cached != null) {
         return (
-          characters: cached.results as List<Character>,
+          characters: List<Character>.from(cached.results),
           totalPages: cached.info.pages,
         );
       }
@@ -48,15 +48,8 @@ class CharacterRepositoryImpl implements CharacterRepository {
   }
 
   @override
-  Future<void> toggleFavorite(Character character) async {
-    final favorites = await localDataSource.getFavorites();
-    final isFav = favorites.any((f) => f.id == character.id);
-    if (isFav) {
-      favorites.removeWhere((f) => f.id == character.id);
-    } else {
-      favorites.add(CharacterModel.fromEntity(character));
-    }
-    await localDataSource.saveFavorites(favorites);
+  Future<void> toggleFavorite(Character character) {
+    return localDataSource.toggleFavorite(CharacterModel.fromEntity(character));
   }
 
   @override
